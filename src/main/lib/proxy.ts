@@ -35,9 +35,18 @@ const systemCheckGSettingsDeps = (): boolean => {
     }
 };
 
-const systemCheckKWriteDeps = (): boolean => {
+const systemCheckKWrite5Deps = (): boolean => {
     try {
         exec('kwriteconfig5 --version');
+        return true;
+    } catch (error) {
+        return false;
+    }
+};
+
+const systemCheckKWrite6Deps = (): boolean => {
+    try {
+        exec('kwriteconfig6 --version');
         return true;
     } catch (error) {
         return false;
@@ -95,14 +104,33 @@ const disableGNOMEProxy = async (): Promise<void> => {
 
 const enableKDEProxy = async (ip: string, port: string): Promise<void> => {
     const proxySettings = {
-        socksProxy: `socks://${ip}:${port}`
+        socksProxy: `socks://${ip}:${port}`,
+        proxyType: '1'
     };
 
     try {
-        await execPromise(
-            `kwriteconfig5 --file kioslaverc --group 'Proxy Settings' --key 'socksProxy' '${proxySettings.socksProxy}'`
-        );
-        log.info(`Proxy settings enabled for KDE with SOCKS5 proxy: ${proxySettings.socksProxy}`);
+        if (systemCheckKWrite5Deps()) {
+            await execPromise(
+                `kwriteconfig5 --file kioslaverc --group 'Proxy Settings' --key 'socksProxy' '${proxySettings.socksProxy}'`
+            );
+            await execPromise(
+                `kwriteconfig5 --file kioslaverc --group 'Proxy Settings' --key 'ProxyType' '${proxySettings.proxyType}'`
+            );
+            log.info(
+                `Proxy settings enabled for KDE5 with SOCKS5 proxy: ${proxySettings.socksProxy}`
+            );
+        }
+        if (systemCheckKWrite6Deps()) {
+            await execPromise(
+                `kwriteconfig6 --file kioslaverc --group 'Proxy Settings' --key 'socksProxy' '${proxySettings.socksProxy}'`
+            );
+            await execPromise(
+                `kwriteconfig6 --file kioslaverc --group 'Proxy Settings' --key 'ProxyType' '${proxySettings.proxyType}'`
+            );
+            log.info(
+                `Proxy settings enabled for KDE6 with SOCKS5 proxy: ${proxySettings.socksProxy}`
+            );
+        }
     } catch (err) {
         log.error(`Error setting SOCKS proxy for KDE: ${err}`);
         throw err;
@@ -111,9 +139,22 @@ const enableKDEProxy = async (ip: string, port: string): Promise<void> => {
 
 const disableKDEProxy = async (): Promise<string> => {
     try {
-        await execPromise(
-            `kwriteconfig5 --file kioslaverc --group 'Proxy Settings' --key 'socksProxy' ''`
-        );
+        if (systemCheckKWrite5Deps()) {
+            await execPromise(
+                `kwriteconfig5 --file kioslaverc --group 'Proxy Settings' --key 'socksProxy' ''`
+            );
+            await execPromise(
+                `kwriteconfig5 --file kioslaverc --group 'Proxy Settings' --key 'ProxyType' '0'`
+            );
+        }
+        if (systemCheckKWrite6Deps()) {
+            await execPromise(
+                `kwriteconfig6 --file kioslaverc --group 'Proxy Settings' --key 'socksProxy' ''`
+            );
+            await execPromise(
+                `kwriteconfig6 --file kioslaverc --group 'Proxy Settings' --key 'ProxyType' '0'`
+            );
+        }
         log.info('Proxy settings disabled for KDE');
         return 'Proxy disabled for KDE';
     } catch (error) {
